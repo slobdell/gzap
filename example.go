@@ -8,19 +8,16 @@ import (
 	"gzap/pool"
 )
 
-func TearDown() {
-	pool.TearDown()
-}
-
-func main() {
-	defer TearDown()
+func example() {
+	defer pool.TearDown()
 	err := pool.WithLogger(
 		"example.topic",
-		func(logger *zap.SugaredLogger) error {
-			logger.Infow(
+		func(logger *zap.Logger) error {
+			logger.Sugar().Infow(
 				"Doing something really important",
 				"url", "https://google.com",
 				"some_num", 5,
+				"i", i,
 			)
 			// do stuff
 			return nil
@@ -29,6 +26,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("sleeping for a bit\n")
+	fmt.Printf("Sleeping in order to allow background buffers to send\n")
 	time.Sleep(5 * time.Second)
 }

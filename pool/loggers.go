@@ -3,7 +3,6 @@ package pool
 // TODO rename this package, it doesn't make sense in terms of abtractions because there's also a pool of publishers
 
 import (
-	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -13,6 +12,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"gzap/gpubsub"
+	"gzap/inputs"
 	"gzap/writers"
 )
 
@@ -47,20 +47,20 @@ func coercePoolExistence(topicName string) {
 
 func newLoggerPool(topicName string) *q.ThreadSafeList {
 	loggerPool := q.NewThreadSafeList()
-	for i := 0; i < maxParallelism(); i++ {
+	for i := 0; i < inputs.MaxParallelism(); i++ {
 		loggerPool.InsertObject(unsafe.Pointer(newLogger(topicName)), alwaysLess)
 	}
-	go backgroundFlush(topicName, milliSLA/maxParallelism())
+	go backgroundFlush(topicName, milliSLA/inputs.MaxParallelism())
 	return &loggerPool
 }
 
-func WithLogger(topicName string, fn func(logger *zap.SugaredLogger) error) error {
+func WithLogger(topicName string, fn func(logger *zap.Logger) error) error {
 	logger, cleanupFn := checkOutLogger(topicName)
 	defer cleanupFn(topicName, logger)
 	return fn(logger)
 }
 
-func checkOutLogger(topicName string) (*zap.SugaredLogger, func(string, *zap.SugaredLogger)) {
+func checkOutLogger(topicName string) (*zap.Logger, func(string, *zap.Logger)) {
 	loggerPool := getLoggerPoolForTopic(topicName)
 	ptr := loggerPool.PopFirst(failAddress)
 	if ptr == failAddress {
@@ -75,32 +75,23 @@ func checkOutLogger(topicName string) (*zap.SugaredLogger, func(string, *zap.Sug
 			return newLogger(topicName), discard
 		}
 	}
-	asLogger := (*zap.SugaredLogger)(ptr)
+	asLogger := (*zap.Logger)(ptr)
 	return asLogger, checkInLogger
 }
 
-func checkInLogger(topicName string, logger *zap.SugaredLogger) {
+func checkInLogger(topicName string, logger *zap.Logger) {
 	getLoggerPoolForTopic(topicName).InsertObject(unsafe.Pointer(logger), alwaysLess)
 }
 
-func discard(topicName string, logger *zap.SugaredLogger) {
+func discard(topicName string, logger *zap.Logger) {
 	logger.Sync()
 }
 
-func maxParallelism() int {
-	maxProcs := runtime.GOMAXPROCS(0)
-	numCPU := runtime.NumCPU()
-	if maxProcs < numCPU {
-		return maxProcs
-	}
-	return numCPU
-}
-
-func newLogger(topicName string) *zap.SugaredLogger {
+func newLogger(topicName string) *zap.Logger {
 	publisher, err := poolFactory.CheckOut(topicName)
 	if err != nil {
 		// TODO better handle these errors; failing silently for now for an otherwise truly exceptional case
-		return zap.NewNop().Sugar()
+		return zap.NewNop()
 	}
 	logger, err := zap.NewProduction(
 		zap.WrapCore(
@@ -116,9 +107,9 @@ func newLogger(topicName string) *zap.SugaredLogger {
 		),
 	)
 	if err != nil {
-		return zap.NewNop().Sugar()
+		return zap.NewNop()
 	}
-	return logger.Sugar()
+	return logger
 }
 
 func alwaysLess(v1 unsafe.Pointer, v2 unsafe.Pointer) bool {
@@ -146,7 +137,7 @@ func backgroundFlush(topicName string, sleepMillis int) {
 }
 
 func init() {
-	poolFactory = gpubsub.GetPoolFactory(projectID, maxParallelism())
+	poolFactory = gpubsub.GetPoolFactory(projectID, inputs.MaxParallelism())
 	canonicalEncoder = zapcore.NewJSONEncoder(
 		zap.NewProductionEncoderConfig(),
 	)

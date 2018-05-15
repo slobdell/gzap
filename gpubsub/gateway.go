@@ -1,8 +1,11 @@
 package gpubsub
 
 import (
-	"cloud.google.com/go/pubsub"
 	"fmt"
+	"time"
+
+	"cloud.google.com/go/pubsub"
+	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 )
@@ -10,6 +13,7 @@ import (
 type gCloudGateway interface {
 	MaybeCreateTopic(topicName string) error
 	GetTopicPublishers(topicName string, n int) []*TopicPublisher
+	SubscribeNowWithHandler(topicName string, handler func(context.Context, []byte)) (recvFn func(), deferFn func(), err error)
 }
 
 // Implements gCloudGateway
@@ -23,6 +27,10 @@ func (n nullGateway) MaybeCreateTopic(topicName string) error {
 
 func (n nullGateway) GetTopicPublishers(string, int) []*TopicPublisher {
 	return nil
+}
+
+func (n nullGateway) SubscribeNowWithHandler(string, func(context.Context, []byte)) (recvFn func(), deferFn func(), err error) {
+	return func() {}, func() {}, n.originalErr
 }
 
 func newNullGateway(originalErr error) nullGateway {
@@ -53,6 +61,33 @@ func (g *gCloudClientWrapper) MaybeCreateTopic(topicName string) error {
 
 func (g *gCloudClientWrapper) createTopic(topicName string) (*pubsub.Topic, error) {
 	return g.client.CreateTopic(g.ctx, topicName)
+}
+
+func (g *gCloudClientWrapper) SubscribeNowWithHandler(topicName string, handler func(ctx context.Context, data []byte)) (recvFn func(), deferFn func(), err error) {
+	ctx := context.Background()
+	sub, err := g.client.CreateSubscription(
+		ctx,
+		fmt.Sprintf("%s-%s", topicName, uuid.NewV4()),
+		pubsub.SubscriptionConfig{
+			Topic:       g.client.Topic(topicName),
+			AckDeadline: 10 * time.Second,
+		},
+	)
+	if err != nil {
+		return func() {}, func() {}, err
+	}
+
+	return func() {
+			sub.Receive(
+				ctx,
+				func(c context.Context, msg *pubsub.Message) {
+					handler(c, msg.Data)
+				},
+			)
+		}, func() {
+			sub.Delete(ctx)
+			fmt.Printf("DELETING THE SUBSCRIPTION\n")
+		}, nil
 }
 
 // Publish() on GCloud Pubsub is a reasonably expensive calls with locks as well and
@@ -100,7 +135,7 @@ func newGCloudClientWrapper(projectID string) (*gCloudClientWrapper, error) {
 	}, nil
 }
 
-func newGCloudGateway(projectID string) gCloudGateway {
+func NewGCloudGateway(projectID string) gCloudGateway {
 	wrapper, err := newGCloudClientWrapper(projectID)
 	if err != nil {
 		return newNullGateway(err)

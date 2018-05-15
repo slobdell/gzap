@@ -24,7 +24,9 @@ func (w *Buffered) Write(p []byte) (n int, err error) {
 		if err := w.flushBuffer(); err != nil {
 			return 0, err
 		}
-		w.publisher.Publish(p)
+		if err := w.publisher.Publish(p); err != nil {
+			return 0, err
+		}
 	} else if len(p)+w.writeCursor > maxMessageSize {
 		if err := w.flushBuffer(); err != nil {
 			return 0, err
@@ -56,7 +58,9 @@ func (w *Buffered) flushBuffer() error {
 	if w.writeCursor == 0 {
 		return nil
 	}
-	w.publisher.Publish(w.buffer[0:w.writeCursor])
+	if err := w.publisher.Publish(w.buffer[0:w.writeCursor]); err != nil {
+		return err
+	}
 	w.writeCursor = 0
 	return nil
 }

@@ -29,7 +29,7 @@ func (p *PoolFactory) coerceTopicPool(topicName string) error {
 		// check, lock, check; it's possible for resource contention here
 		if !p.topicInitialized(topicName) {
 			pool, err := newTopicPublisherPool(
-				newGCloudGateway(p.projectID),
+				NewGCloudGateway(p.projectID),
 				topicName,
 				p.maxParallelism,
 			)
@@ -68,14 +68,3 @@ func GetPoolFactory(projectID string, maxParallelism int) *PoolFactory {
 func factoryKey(projectID string, maxParallelism int) string {
 	return fmt.Sprintf("%s:%d", projectID, maxParallelism)
 }
-
-/*
-	sub, err := client.CreateSubscription(ctx, "subName", pubsub.SubscriptionConfig{
-		Topic:       topic,
-		AckDeadline: 10 * time.Second,
-	})
-	if err != nil {
-		log.Fatalf("Failed to subscribe: %v", err)
-	}
-	_ = sub // use the subscription...
-*/
