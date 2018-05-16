@@ -1,4 +1,4 @@
-package main
+package gzap
 
 import (
 	"fmt"
