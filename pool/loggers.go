@@ -11,10 +11,9 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	b "gzap/boundaries"
-	"gzap/gpubsub"
-	"gzap/inputs"
-	"gzap/writers"
+	"github.com/slobdell/gzap/gpubsub"
+	"github.com/slobdell/gzap/inputs"
+	"github.com/slobdell/gzap/writers"
 )
 
 const (
@@ -55,7 +54,7 @@ func newLoggerPool(topicName string) *q.ThreadSafeList {
 	return &loggerPool
 }
 
-func WithLogger(topicName string, fn func(logger b.Logger) error) error {
+func WithLogger(topicName string, fn func(logger interface{}) error) error {
 	logger, cleanupFn := checkOutLogger(topicName)
 	defer cleanupFn(topicName, logger)
 	return fn(logger.Sugar())
