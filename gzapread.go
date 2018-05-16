@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	"gzap/controllers"
+	"github.com/slobdell/gzap/controllers"
 )
 
 var sigChan = make(chan os.Signal)

@@ -1,8 +1,8 @@
 package gzap
 
 import (
-	b "gzap/boundaries"
-	"gzap/pool"
+	b "github.com/slobdell/gzap/boundaries"
+	"github.com/slobdell/gzap/pool"
 )
 
 // WithLogger takes an input topic and an input function with a boundaries.Logger object;
