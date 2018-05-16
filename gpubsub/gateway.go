@@ -86,7 +86,6 @@ func (g *gCloudClientWrapper) SubscribeNowWithHandler(topicName string, handler 
 			)
 		}, func() {
 			sub.Delete(ctx)
-			fmt.Printf("DELETING THE SUBSCRIPTION\n")
 		}, nil
 }
 

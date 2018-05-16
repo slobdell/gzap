@@ -17,7 +17,6 @@ func example() {
 				"Doing something really important",
 				"url", "https://google.com",
 				"some_num", 5,
-				"i", i,
 			)
 			// do stuff
 			return nil
