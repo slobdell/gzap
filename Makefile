@@ -4,3 +4,6 @@ create_topic:
 
 create_subscription:
 	gcloud pubsub subscriptions create my-sub --topic my-topic
+
+test:
+	go test ./...
