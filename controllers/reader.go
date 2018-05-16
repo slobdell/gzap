@@ -9,8 +9,8 @@ import (
 	q "github.com/slobdell/skew-binomial-queues"
 	"golang.org/x/net/context"
 
-	"gzap/gpubsub"
-	"gzap/inputs"
+	"github.com/slobdell/gzap/gpubsub"
+	"github.com/slobdell/gzap/inputs"
 )
 
 type bufferedLine struct {
