@@ -5,12 +5,16 @@ import (
 	"gzap/pool"
 )
 
-func WithLogger(topicName string, fn func(b.Logger) error) error {
+// WithLogger takes an input topic and an input function with a boundaries.Logger object;
+// Due to limitations I haven't worked around yet, Go does not play nicely passing in a function
+// that takes a dependent type as a parameter.  In the caller then, the function passed must
+// manually cast the logger parameter into a boundaries.Logger interface
+func WithLogger(topicName string, fn func(logger interface{}) error) error {
 	return pool.WithLogger(
 		topicName,
-		func(logger b.Logger) error {
+		func(lg b.Logger) error {
 			return fn(
-				logger,
+				lg,
 			)
 		},
 	)
