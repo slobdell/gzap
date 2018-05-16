@@ -1,5 +1,7 @@
 package gzap
 
+/*
+
 import (
 	"fmt"
 	"time"
@@ -28,3 +30,4 @@ func example() {
 	fmt.Printf("Sleeping in order to allow background buffers to send\n")
 	time.Sleep(5 * time.Second)
 }
+*/
