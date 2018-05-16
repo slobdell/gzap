@@ -27,8 +27,6 @@ var canonicalEncoder zapcore.Encoder
 
 var poolFactory *gpubsub.PoolFactory
 
-const milliSLA = 1000
-
 func getLoggerPoolForTopic(topicName string) *q.ThreadSafeList {
 	coercePoolExistence(topicName)
 	return topicToLoggerPool[topicName]
@@ -50,7 +48,9 @@ func newLoggerPool(topicName string) *q.ThreadSafeList {
 	for i := 0; i < inputs.MaxParallelism(); i++ {
 		loggerPool.InsertObject(unsafe.Pointer(newLogger(topicName)), alwaysLess)
 	}
-	go backgroundFlush(topicName, milliSLA/inputs.MaxParallelism())
+	// background flushes happen at half the period of the actually defined SLA in order
+	// to satisfy Nyquist sampling
+	go backgroundFlush(topicName, inputs.SLASeconds/time.Duration(2*inputs.MaxParallelism()))
 	return &loggerPool
 }
 
@@ -122,7 +122,7 @@ func alwaysGreater(v1 unsafe.Pointer, v2 unsafe.Pointer) bool {
 	return false
 }
 
-func backgroundFlush(topicName string, sleepMillis int) {
+func backgroundFlush(topicName string, sleepTime time.Duration) {
 	for {
 		logger, _ := checkOutLogger(topicName)
 		logger.Sync()
@@ -132,7 +132,7 @@ func backgroundFlush(topicName string, sleepMillis int) {
 			unsafe.Pointer(logger),
 			alwaysGreater,
 		)
-		time.Sleep(time.Duration(sleepMillis) * time.Millisecond)
+		time.Sleep(sleepTime)
 	}
 }
 
