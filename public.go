@@ -13,7 +13,7 @@ type Logger interface {
 func CheckOutLogger(topicName string) (Logger, func()) {
 	zLogger, deferFn := pool.CheckOutLogger(topicName)
 	return zLogger.Sugar(), func() {
-		deferFn(zLogger)
+		deferFn(topicName, zLogger)
 	}
 }
 
