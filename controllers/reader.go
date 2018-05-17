@@ -109,9 +109,13 @@ func epochToTime(epoch float64) time.Time {
 
 func PrintIncoming(topicName string) (func(), error) {
 	serialization := make(chan []byte)
-	recvFn, deferFn, err := gpubsub.NewGCloudGateway(
+	gateway := gpubsub.NewGCloudGateway(
 		inputs.GoogleProjectID(),
-	).SubscribeNowWithHandler(
+	)
+	if err := gateway.MaybeCreateTopic(topicName); err != nil {
+		return func() {}, err
+	}
+	recvFn, deferFn, err := gateway.SubscribeNowWithHandler(
 		topicName,
 		newStatefulWithChannel(serialization).dequeueMessages,
 	)
