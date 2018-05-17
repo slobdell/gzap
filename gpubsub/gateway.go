@@ -2,10 +2,10 @@ package gpubsub
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/api/iterator"
 )
@@ -67,7 +67,7 @@ func (g *gCloudClientWrapper) SubscribeNowWithHandler(topicName string, handler 
 	ctx := context.Background()
 	sub, err := g.client.CreateSubscription(
 		ctx,
-		fmt.Sprintf("%s-%s", topicName, uuid.NewV4()),
+		fmt.Sprintf("%s-%s", topicName, uniqueString()),
 		pubsub.SubscriptionConfig{
 			Topic:       g.client.Topic(topicName),
 			AckDeadline: 10 * time.Second,
@@ -172,4 +172,14 @@ func asStrings(topics []*pubsub.Topic) []string {
 		strings[i] = topic.String()
 	}
 	return strings
+}
+
+func uniqueString() string {
+	hostname, _ := os.Hostname()
+	return fmt.Sprintf(
+		"%d-%d-%s",
+		os.Getpid(),
+		time.Now().UnixNano(),
+		hostname,
+	)
 }

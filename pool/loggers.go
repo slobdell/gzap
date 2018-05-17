@@ -54,19 +54,13 @@ func newLoggerPool(topicName string) *q.ThreadSafeList {
 	return &loggerPool
 }
 
-func WithLogger(topicName string, fn func(logger interface{}) error) error {
-	logger, cleanupFn := checkOutLogger(topicName)
-	defer cleanupFn(topicName, logger)
-	return fn(logger.Sugar())
-}
-
-func checkOutLogger(topicName string) (*zap.Logger, func(string, *zap.Logger)) {
+func CheckOutLogger(topicName string) (*zap.Logger, func(string, *zap.Logger)) {
 	loggerPool := getLoggerPoolForTopic(topicName)
 	ptr := loggerPool.PopFirst(failAddress)
 	if ptr == failAddress {
 		if loggerPool.LengthGreaterThan(0) {
 			// simple resource contention; retry
-			return checkOutLogger(topicName)
+			return CheckOutLogger(topicName)
 		} else {
 			// all loggers are checked out, instantiate a new logger
 			// this case should be an exception rather than the general case,
@@ -124,7 +118,7 @@ func alwaysGreater(v1 unsafe.Pointer, v2 unsafe.Pointer) bool {
 
 func backgroundFlush(topicName string, sleepTime time.Duration) {
 	for {
-		logger, _ := checkOutLogger(topicName)
+		logger, _ := CheckOutLogger(topicName)
 		logger.Sync()
 		getLoggerPoolForTopic(
 			topicName,
@@ -147,7 +141,7 @@ func init() {
 func TearDown() {
 	for topicName, loggerPool := range topicToLoggerPool {
 		for loggerPool.LengthGreaterThan(0) {
-			logger, _ := checkOutLogger(topicName)
+			logger, _ := CheckOutLogger(topicName)
 			logger.Sync()
 		}
 	}
