@@ -17,10 +17,18 @@ func (t *TopicPublisher) Publish(p []byte) error {
 	publishResult := t.topic.Publish(
 		ctx,
 		&pubsub.Message{
-			Data: p,
+			Data: copied(p),
 		},
 	)
 	// SBL dont know if we need this yet
 	publishResult = publishResult
 	return nil
+}
+
+func copied(p []byte) []byte {
+	c := make([]byte, len(p))
+	for i, b := range p {
+		c[i] = b
+	}
+	return c
 }
