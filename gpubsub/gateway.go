@@ -82,6 +82,7 @@ func (g *gCloudClientWrapper) SubscribeNowWithHandler(topicName string, handler 
 				ctx,
 				func(c context.Context, msg *pubsub.Message) {
 					handler(c, msg.Data)
+					msg.Ack()
 				},
 			)
 		}, func() {
